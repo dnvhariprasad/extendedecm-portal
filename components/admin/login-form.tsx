@@ -42,6 +42,9 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={onSubmit}>
+          <p className="text-sm leading-6 text-[#667085]">
+            Sign in with an approved Supabase Auth user to manage portal content.
+          </p>
           <label className="block">
             <span className="text-sm font-medium text-[#344054]">Email</span>
             <input

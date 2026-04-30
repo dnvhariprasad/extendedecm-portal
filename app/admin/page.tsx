@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FileText, Layers, ShieldCheck, Tags } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AdminShell } from "@/components/admin/admin-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseServerClient, hasSupabaseBrowserEnv } from "@/lib/supabase/server";
 
@@ -44,18 +43,8 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--primary)]">CMS</p>
-          <h1 className="mt-3 text-4xl font-bold">Admin workspace</h1>
-          <p className="mt-3 text-[#667085]">Signed in as {user.email}</p>
-        </div>
-        <Button asChild variant="secondary">
-          <Link href="/">View portal</Link>
-        </Button>
-      </div>
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+    <AdminShell userEmail={user.email}>
+      <div className="grid gap-4 md:grid-cols-2">
         {adminCards.map((item) => (
           <Card key={item.title}>
             <CardHeader className="flex-row items-center gap-3">
@@ -70,6 +59,6 @@ export default async function AdminPage() {
           </Card>
         ))}
       </div>
-    </div>
+    </AdminShell>
   );
 }
