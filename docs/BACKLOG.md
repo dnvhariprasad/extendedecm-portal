@@ -199,9 +199,11 @@ Tasks:
 - Add logout action.
 - Add admin navigation.
 
-### E3-S3: Role-Based Admin Access
+### E3-S3: Wire Role Checks Into Admin UI
 
 As the portal owner, I want owner/editor/viewer roles so that access can be controlled by responsibility.
+
+Note: schema-level roles, the `is_editor()` helper, and editor-write RLS policies are already shipped. This story covers the remaining UI gating only.
 
 Priority: P1
 
@@ -215,9 +217,7 @@ Acceptance criteria:
 Tasks:
 
 - Seed first owner profile.
-- Add server-side role lookup helper.
 - Add route-level role checks.
-- Add RLS policy verification.
 - Add admin user management later.
 
 ## Epic 4: Supabase Data And Security
@@ -250,12 +250,15 @@ As a developer, I want typed data access helpers so that pages and admin screens
 
 Priority: P0
 
+Status: Shipped through EXCM-004. Future work should refine error behavior and production fallback handling rather than reimplement the access layer.
+
 Acceptance criteria:
 
 - Public content queries are centralized.
 - Admin content mutations are centralized.
 - Types map cleanly to database rows and block schemas.
 - Errors are handled predictably.
+- Production errors and empty datasets are not hidden by scaffold sample-content fallback.
 
 Tasks:
 
@@ -264,6 +267,8 @@ Tasks:
 - Add `lib/data/articles.ts`.
 - Add `lib/data/media.ts`.
 - Add error helpers for admin mutations.
+- Populate `created_by` on insert and `updated_by` on update through every admin mutation helper.
+- Restrict sample-content fallback to local development or explicitly configured demo mode.
 
 ### E4-S3: Secret Hygiene
 
@@ -321,6 +326,7 @@ Acceptance criteria:
 - Editor can enter title, slug, excerpt, type, product, category, and status.
 - Editor can add initial blocks.
 - Save creates a draft in Supabase.
+- Saved articles record the acting user in `created_by` (insert) and `updated_by` (update).
 
 Tasks:
 
@@ -342,6 +348,7 @@ Acceptance criteria:
 - Editor can update title, slug, excerpt, type, product, category, tags, and status.
 - Save persists changes.
 - Validation prevents duplicate or invalid slugs.
+- Saved articles refresh `updated_by` from the acting user on every save.
 
 Tasks:
 
@@ -354,6 +361,8 @@ Tasks:
 ### E5-S4: Block Add/Edit/Reorder
 
 As an editor, I want to compose articles with blocks so that content is structured and visually useful.
+
+Note: code, DQL, and SQL are all served by the single `code` block via the `language` field per PRD §6.3.
 
 Priority: P1
 
@@ -430,6 +439,8 @@ Acceptance criteria:
 - Mermaid source remains visible in a details/fallback area.
 - Render errors are displayed without breaking the article.
 - Diagram container is responsive.
+- Rendered SVG includes `aria-label` or a `<title>` element with the diagram name.
+- Mermaid source remains keyboard-reachable (always visible or disclosure-revealed).
 
 Tasks:
 
@@ -473,6 +484,8 @@ Acceptance criteria:
 - Search can find article titles and body content.
 - Search can find product pages.
 - Search works without a hosted search service.
+- Implementation verifies the Next 16 App Router output path used by Vercel builds.
+- Admin/private routes are excluded from the final Pagefind index.
 
 Tasks:
 
@@ -481,6 +494,7 @@ Tasks:
 - Add search UI.
 - Add search result page or modal.
 - Verify Vercel build output includes index.
+- If Vercel artifacts are unsuitable, implement a post-deploy crawl of the public site.
 
 ### E7-S2: Search Filters
 
@@ -735,7 +749,9 @@ Tasks:
 
 As a public reader, I want search engines to discover the content so that the portal is findable.
 
-Priority: P1
+Promoted to MVP per PRD §11 (was Phase 5 in the earlier draft).
+
+Priority: P0
 
 Acceptance criteria:
 
@@ -813,15 +829,23 @@ Tasks:
 
 ## Recommended Build Order
 
-1. E1-S2: Commit and push scaffold.
-2. E10-S1: Connect Vercel and confirm deployment.
-3. E4-S1: Apply Supabase schema and create first owner profile.
-4. E3-S1 and E3-S2: Verify admin login and protected dashboard.
-5. E4-S2: Add database access layer.
-6. E5-S1: Build admin article list.
-7. E5-S2 and E5-S3: Build create/edit metadata flow.
-8. E5-S4: Build block editor.
-9. E5-S5: Build publish/unpublish.
-10. E7-S1: Add Pagefind search.
-11. E10-S2 and E10-S3: Connect domain and complete production checks.
-12. E9-S3: Add first real launch content.
+Completed baseline:
+
+- E1-S2: Commit and push scaffold.
+- E3-S1 and E3-S2: Admin login and protected dashboard.
+- E4-S2: Database access layer.
+- E5-S1: Admin article list.
+- E5-S2 and E5-S3: Article create/edit metadata flow.
+
+Next:
+
+1. Fix review findings: rich-text sanitization, production fallback behavior, update-result detection, and publish timestamp preservation.
+2. Apply Supabase schema and create first owner profile (E4-S1).
+3. Wire role checks into admin UI (E3-S3).
+4. Build block editor add/edit/reorder/remove (E5-S4).
+5. Build publish/unpublish controls (E5-S5).
+6. Connect Vercel and verify production deployment (E10-S1).
+7. Add sitemap and robots (E11-S3 / EXCM-013).
+8. Add Pagefind search after production artifact verification (E7-S1).
+9. Connect custom domain and complete production checks (E10-S2 and E10-S3).
+10. Add first real launch content (E9-S3).

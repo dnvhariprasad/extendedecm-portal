@@ -131,6 +131,7 @@ Tasks:
 Type: Story
 Priority: P0
 Epic: Supabase Data And Security
+Status: Merged in PR #4. Follow-up work should focus on production fallback behavior and error handling.
 
 As a developer, I want centralized data access helpers so that public and admin pages do not duplicate Supabase queries.
 
@@ -140,6 +141,8 @@ Acceptance criteria:
 - Article reads are centralized.
 - Admin mutations have a clear server-side entry point.
 - Query errors return consistent messages.
+- Admin mutation helpers populate `created_by` on insert and refresh `updated_by` on update; both fields are persisted on every admin write (PRD §7.3).
+- Public-read helpers are centralized and compatible with the current Next.js App Router rendering model.
 
 Tasks:
 
@@ -154,6 +157,7 @@ Tasks:
 Type: Story
 Priority: P1
 Epic: CMS Content Editing
+Status: Merged in PR #5.
 
 As an editor, I want to see articles in the admin area so that I can manage portal content.
 
@@ -177,6 +181,7 @@ Tasks:
 Type: Story
 Priority: P1
 Epic: CMS Content Editing
+Status: Merged in PR #6.
 
 As an editor, I want to create draft articles so that new knowledge can be added safely.
 
@@ -186,6 +191,7 @@ Acceptance criteria:
 - Form captures title, slug, excerpt, product, category, content type, and status.
 - Slug can be generated from title.
 - Save persists draft content to Supabase.
+- `created_by` is set from the authenticated user on insert; `updated_by` is refreshed on every save (PRD §7.3).
 
 Tasks:
 
@@ -200,6 +206,7 @@ Tasks:
 Type: Story
 Priority: P1
 Epic: CMS Content Editing
+Status: Merged in PR #7.
 
 As an editor, I want to edit article metadata so that content stays accurate.
 
@@ -209,6 +216,7 @@ Acceptance criteria:
 - Editor can update metadata fields.
 - Duplicate/invalid slugs are rejected.
 - Save state and errors are visible.
+- `updated_by` is refreshed from the authenticated user on every save (PRD §7.3).
 
 Tasks:
 
@@ -232,6 +240,8 @@ Acceptance criteria:
 - Blocks save as portable JSON.
 - Public article renderer can render saved blocks.
 - Unknown block data does not crash the editor or public page.
+- Code block accepts a `language` field; DQL/SQL/script all use this single block (no separate DQL block) per PRD §6.3.
+- Mermaid block preserves source text in a keyboard-operable disclosure (or always-visible region); the rendered SVG carries `aria-label` or a `<title>` element with the diagram's name (PRD §8.4).
 
 Tasks:
 
@@ -269,6 +279,7 @@ Tasks:
 Type: Story
 Priority: P1
 Epic: Search And Discovery
+Status: Not started. Local verification showed `npm run search:index` can index generated HTML under `.next/server/app`; this ticket must harden and verify the approach in Vercel production builds.
 
 As a public reader, I want search so that I can find products, errors, snippets, and guides quickly.
 
@@ -278,6 +289,7 @@ Acceptance criteria:
 - Search UI returns product and article results.
 - Search does not require a hosted search service.
 - Admin/private routes are not indexed.
+- Indexing strategy works in the deployed Vercel build; if `.next/server/app` is unsuitable in Vercel, use a post-deploy crawl of the public site.
 
 Tasks:
 
@@ -333,17 +345,18 @@ Tasks:
 ### EXCM-013: Add Sitemap And Robots
 
 Type: Story
-Priority: P1
+Priority: P0
 Epic: Deployment And Domain
 
 As a public reader, I want search engines to discover public pages so that portal content is findable.
 
+Promoted to MVP per PRD §11.
+
 Acceptance criteria:
 
-- Sitemap includes public pages.
-- Robots allows public indexing.
-- Admin routes are disallowed.
-- Metadata is present for key routes.
+- `sitemap.xml` lists public routes only and excludes `/admin`.
+- `robots.txt` allows public indexing and disallows `/admin`.
+- Public routes have per-page `<title>` and meta description.
 
 Tasks:
 
@@ -351,6 +364,51 @@ Tasks:
 - Add robots route.
 - Add metadata review.
 - Verify generated URLs.
+
+### EXCM-022: Audit Public Chrome — Disclaimer Footer And Per-Page Metadata
+
+Type: Story
+Priority: P0
+Epic: Public Portal Experience
+
+As a portal owner, I want to verify every public page renders the non-affiliation disclaimer and exposes route metadata so that legal clarity and SEO basics are confirmed before MVP.
+
+Acceptance criteria:
+
+- Non-affiliation disclaimer (PRD §8.5 verbatim) is verified in `components/site-footer.tsx` and appears on public routes.
+- Each public route has a Next.js `metadata` object or generated metadata with `title` and `description`.
+- Admin routes are unaffected.
+
+Tasks:
+
+- Audit disclaimer copy in site footer.
+- Audit metadata on homepage, products index, product detail, and article detail routes.
+- Add missing metadata only where gaps remain.
+- Spot-check rendered HTML for `<meta name="description">`.
+
+### EXCM-023: Address Review Findings Before Block Editor
+
+Type: Story
+Priority: P0
+Epic: Production Hardening
+
+As the portal owner, I want the known review findings fixed before expanding the block editor so that new CMS features do not build on unsafe or misleading behavior.
+
+Acceptance criteria:
+
+- Rich text rendering is sanitized or replaced with structured rendering before stored CMS content can render publicly.
+- Public data helpers do not show scaffold sample content in production when Supabase errors or returns empty datasets.
+- Article update action detects missing, unauthorized, or zero-row updates and reports an error.
+- Publishing preserves the original `published_at` timestamp when editing already-published articles.
+- Verification includes lint, typecheck, build, and targeted behavior checks.
+
+Tasks:
+
+- Add HTML sanitization or structured rich-text renderer.
+- Restrict sample-content fallback to local development or explicit demo mode.
+- Update article mutation handling to verify affected row.
+- Preserve `published_at` unless transitioning into published status.
+- Add tests or focused regression checks where practical.
 
 ### EXCM-014: Add Backup And Export Workflow
 
@@ -509,8 +567,26 @@ Tasks:
 
 ## Current Execution Queue
 
-1. EXCM-000: Bootstrap Repository Baseline
-2. EXCM-001: Configure CI Verification
-3. EXCM-002: Apply Supabase Schema And Seed Owner Setup Documentation
-4. EXCM-003: Verify Supabase Auth Login End-To-End
-5. EXCM-004: Add Database Access Layer
+Completed:
+
+- EXCM-000: Bootstrap Repository Baseline
+- EXCM-001: Configure CI Verification
+- EXCM-002: Apply Supabase Schema And Seed Owner Setup Documentation
+- EXCM-003: Verify Supabase Auth Login End-To-End
+- EXCM-004: Add Database Access Layer
+- EXCM-005: Build Admin Article List
+- EXCM-006: Build Article Create Flow
+- EXCM-007: Build Article Edit Metadata Flow
+
+Next:
+
+1. EXCM-023: Address Review Findings Before Block Editor
+2. EXCM-002 operational follow-through: apply Supabase schema and seed first owner profile
+3. EXCM-022: Audit Public Chrome — Disclaimer Footer And Per-Page Metadata
+4. EXCM-013: Add Sitemap And Robots
+5. EXCM-008: Build First-Release Block Editor
+6. EXCM-009: Build Publish And Unpublish Flow
+7. EXCM-010: Add Pagefind Search
+8. EXCM-011 → EXCM-012: Vercel deployment and custom domain
+9. EXCM-015: First launch content set
+10. EXCM-014, EXCM-016 → EXCM-020: Post-MVP
