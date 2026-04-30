@@ -118,8 +118,7 @@ Required first-release blocks:
 - Heading
 - Rich text
 - Note / warning / best practice
-- Code snippet
-- DQL/SQL snippet
+- Code snippet (DQL/SQL/script handled by the same block via the `language` field; split into a dedicated DQL block only if syntax-aware behavior is later required)
 - Mermaid diagram
 - Step-by-step procedure
 
@@ -146,13 +145,14 @@ Planned later blocks:
 - Public content should be SEO-friendly with page titles and descriptions.
 - URLs should be human-readable and stable.
 
-### 7.2 Admin Authentication
+### 7.2 Admin Authentication And Authorization
 
 - Admin area must be available at `/admin`.
 - Login page must be available at `/admin/login`.
-- Authentication must use Supabase Auth.
+- Authentication must use Supabase Auth (email/password is the first-release method; magic link evaluated post-MVP).
 - Unauthenticated users must be redirected away from protected admin pages.
-- Admin authorization must later support owner/editor/viewer roles.
+- Authorization uses owner/editor/viewer roles, modeled by `profiles.role` and the `public.is_editor()` security-definer helper in `supabase/schema.sql`. RLS policies for editor writes are already in place.
+- Admin UI must consult `is_editor()` (or an equivalent server-side helper) before exposing write actions; viewer-role users must see read-only states rather than failed mutations.
 
 ### 7.3 Content Management
 
@@ -161,6 +161,7 @@ Planned later blocks:
 - Articles must support draft, published, and archived states.
 - Articles must support product/category/tag relationships.
 - Content should preserve raw diagram source where possible.
+- Article inserts must populate `created_by` with the acting user; updates must refresh `updated_by`. Both columns reference `auth.users(id)` and must never be left null on writes performed through the admin UI.
 
 ### 7.4 Diagram Handling
 
@@ -175,6 +176,10 @@ Planned later blocks:
 - Search should index public static pages.
 - Search should support article titles, excerpts, product names, and body content.
 - Hosted search products such as Algolia, Typesense, or Meilisearch may be evaluated later if content volume grows.
+
+Implementation note: Pagefind requires rendered HTML on disk. Local verification showed that the current `npm run search:index` command can index generated HTML under `.next/server/app`. E7-S1 must harden this for production by confirming the same artifact path exists in Vercel builds, excluding admin/private routes, and documenting the final indexing command.
+
+If the Vercel build artifact path is not stable enough for Pagefind, use a post-deploy crawl of the deployed public site instead of switching the entire app to static export.
 
 ### 7.6 Media
 
@@ -216,7 +221,8 @@ Planned later blocks:
 - Navigation must be keyboard accessible.
 - Buttons and links must have clear labels.
 - Text contrast must be readable.
-- Diagrams should include titles and visible source fallback where possible.
+- Diagrams must include a visible title rendered alongside the diagram and an accessible name on the rendered SVG (e.g. `aria-label` or `<title>`).
+- Mermaid blocks must keep the source text reachable for users — either always visible, or inside a keyboard-operable disclosure — so a render failure or assistive-tech scenario never leaves the diagram opaque.
 
 ### 8.5 Legal And Branding
 
@@ -242,6 +248,8 @@ Planned later blocks:
 - Vercel
 - Pagefind
 - Mermaid
+
+React Flow is planned for a later block type (§6.3) and will be added as a dependency when that block lands; it is not part of the locked first-release stack.
 
 ### 9.2 Repository
 
@@ -328,7 +336,9 @@ The MVP is complete when:
 - Admin dashboard is protected.
 - Initial Supabase schema is available.
 - Vercel deployment can be configured.
-- Domain connection plan for `extendedecm.com` is documented.
+- Non-affiliation disclaimer is rendered in the footer on every public page.
+- Public pages have per-route `<title>` and meta description.
+- `sitemap.xml` and `robots.txt` are served, listing public routes only and excluding `/admin`.
 - No secrets are committed.
 
 ## 12. Post-MVP Roadmap
@@ -360,12 +370,11 @@ The MVP is complete when:
 
 ### Phase 5: Production Hardening
 
-- Role-based admin authorization
+- Role-based admin authorization wired into UI gating (schema-level roles already exist)
 - Backup/export workflow
 - Vercel production deployment
 - Domain setup for `extendedecm.com`
 - Analytics
-- Sitemap and robots.txt
 - Content QA checklist
 
 ## 13. Success Metrics
@@ -387,31 +396,45 @@ Public growth metrics may later include:
 - Returning visitors.
 - External references or shares.
 
+Each metric needs a recorded source (e.g. Pagefind log, analytics provider, manual content audit) and review cadence before it can be tracked. Defer concrete targets until baseline numbers exist.
+
 ## 14. Open Questions
 
-- Which Supabase Auth method should be enabled first: email/password or magic link?
-- Who are the first admin/editor users?
-- Should public content be fully static at launch or fetched at build time from Supabase?
+Resolved:
+
+- Auth method: email/password is the first-release method (shipped via EXCM-003). Magic link deferred post-MVP.
+
+Open and blocking:
+
+- Who are the first admin/editor users (names + email addresses for `profiles` seeding)?
+
+Open and non-blocking:
+
+- Public rendering and indexing model for search — continue with the current Supabase-backed App Router approach unless Pagefind production verification fails, then evaluate a post-deploy crawl.
 - Should media uploads be public by default or signed/private until published?
 - Which product section should be built first with real content?
 - What is the preferred visual style for architecture diagrams: Mermaid-first, draw.io-first, or custom React Flow-first?
 
 ## 15. Current Implementation Status
 
-Already scaffolded:
+Shipped on `main`:
 
-- Next.js app shell
-- Public homepage
-- Product routes
-- Article route
-- Admin route
-- Admin login route
-- Supabase client helpers
-- Sample content
-- Initial block renderer
-- Mermaid rendering block
-- Initial Supabase schema
+- Next.js app shell, public homepage, product routes, article route.
+- Admin route protected by Supabase Auth; admin login route; sign-out server action; authenticated admin shell (EXCM-003).
+- Server and browser Supabase client helpers (`@supabase/ssr`).
+- Public Supabase data access layer for products and published articles, with scaffold sample-content fallback while Supabase setup is incomplete (EXCM-004).
+- Block renderer for heading / rich-text / note / code / mermaid / steps; client-only Mermaid block.
+- Initial Supabase schema with RLS, `is_editor()` helper, and editor-write policies.
+- `docs/SUPABASE_SETUP.md` runbook for applying schema, seeding the first owner, and creating storage buckets (EXCM-002).
+- CI workflow running lint, typecheck, and build on Node 22.
+- Admin article list with setup, empty, and table states (EXCM-005).
+- Admin article creation flow for metadata and initial draft/published records (EXCM-006).
+- Admin article metadata editing flow for title, slug, excerpt, product, content type, and status (EXCM-007).
+
+In flight:
+
+- No active implementation branch is currently in flight.
 
 Next recommended implementation step:
 
-Build the first real admin editing workflow for articles and blocks.
+Address the latest code-review findings, especially rich-text sanitization and production sample-content fallback, then continue with `EXCM-008` for block add/edit/reorder/remove.
