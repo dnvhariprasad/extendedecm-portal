@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { products } from "@/lib/content/sample-content";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listProducts } from "@/lib/data/products";
 
 export const metadata = {
   title: "Products",
 };
 
-export default function ProductsPage() {
+export default async function ProductsPage() {
+  const products = await listProducts();
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
       <div className="max-w-3xl">

@@ -1,18 +1,19 @@
 import { notFound } from "next/navigation";
 import { BlockRenderer } from "@/components/blocks/block-renderer";
-import { articles, getArticle } from "@/lib/content/sample-content";
+import { getPublishedArticleBySlug, listPublishedArticles } from "@/lib/data/articles";
 
 type ArticlePageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const articles = await listPublishedArticles();
   return articles.map((article) => ({ slug: article.slug }));
 }
 
 export async function generateMetadata({ params }: ArticlePageProps) {
   const { slug } = await params;
-  const article = getArticle(slug);
+  const article = await getPublishedArticleBySlug(slug);
 
   return {
     title: article?.title ?? "Article",
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: ArticlePageProps) {
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
-  const article = getArticle(slug);
+  const article = await getPublishedArticleBySlug(slug);
 
   if (!article) {
     notFound();
