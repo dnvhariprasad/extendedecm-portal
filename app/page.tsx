@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, Boxes, Bug, GitBranch, Network } from "lucide-react";
-import { getFeaturedArticles, products } from "@/lib/content/sample-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listFeaturedArticles } from "@/lib/data/articles";
+import { listProducts } from "@/lib/data/products";
 
 const capabilityCards = [
   {
@@ -27,8 +28,8 @@ const capabilityCards = [
   },
 ];
 
-export default function Home() {
-  const featuredArticles = getFeaturedArticles();
+export default async function Home() {
+  const [featuredArticles, products] = await Promise.all([listFeaturedArticles(), listProducts()]);
 
   return (
     <div>

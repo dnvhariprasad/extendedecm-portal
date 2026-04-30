@@ -1,18 +1,19 @@
 import { notFound } from "next/navigation";
-import { getProduct, products } from "@/lib/content/sample-content";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getProductBySlug, listProducts } from "@/lib/data/products";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const products = await listProducts();
   return products.map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProductBySlug(slug);
 
   return {
     title: product?.name ?? "Product",
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: ProductPageProps) {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();
