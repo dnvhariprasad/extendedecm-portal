@@ -32,3 +32,5 @@ Copy `.env.example` to `.env.local` and fill the Supabase values. Do not commit 
 ## Database
 
 Start with `supabase/schema.sql` for the first-pass content model.
+
+Follow [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) to apply the schema, create the first owner profile, and configure storage buckets.
