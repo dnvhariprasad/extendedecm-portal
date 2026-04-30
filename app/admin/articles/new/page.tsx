@@ -59,7 +59,7 @@ export default async function NewArticlePage() {
           <CardTitle>Article metadata</CardTitle>
         </CardHeader>
         <CardContent>
-          <ArticleMetadataForm products={products ?? []} />
+          <ArticleMetadataForm mode="create" products={products ?? []} />
         </CardContent>
       </Card>
     </AdminShell>
